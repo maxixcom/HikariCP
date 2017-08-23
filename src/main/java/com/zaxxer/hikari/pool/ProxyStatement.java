@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This is the proxy class for java.sql.Statement.
@@ -31,13 +32,14 @@ public abstract class ProxyStatement implements Statement
    protected final ProxyConnection connection;
    final Statement delegate;
 
-   private boolean isClosed;
+   private AtomicBoolean isClosed;
    private ResultSet proxyResultSet;
 
    ProxyStatement(ProxyConnection connection, Statement statement)
    {
       this.connection = connection;
       this.delegate = statement;
+      this.isClosed = new AtomicBoolean();
    }
 
    @SuppressWarnings("unused")
@@ -62,11 +64,10 @@ public abstract class ProxyStatement implements Statement
    @Override
    public final void close() throws SQLException
    {
-      if (isClosed) {
+      if (!isClosed.compareAndSet(false, true)) {
          return;
       }
 
-      isClosed = true;
       connection.untrackStatement(delegate);
 
       try {
